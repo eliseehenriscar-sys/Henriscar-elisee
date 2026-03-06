@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -10,5 +10,7 @@
     <h1>¡Hola, mundo!</h1>
     <p>Esta es mi primera página web.</p>
 
+    <img src="![alt text](image.png)" alt="Descripción de la imagen" width="300">
+
 </body>
-</html># Henriscar-elisee 
+</html>
