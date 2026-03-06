@@ -10,7 +10,7 @@
     <h1>¡Hola, mundo!</h1>
     <p>Esta es mi primera página web.</p>
 
-    <img src="![alt text](image.png)" alt="Descripción de la imagen" width="300">
+    <img src=https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3a29ndzNoY3o0a2JidXpxdXI5MG93NHF3b2c2NDJ4cjR1bmh2djZ0ZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/S99cgkURVO62qemEKM/giphy.gif>
 
 </body>
 </html>
