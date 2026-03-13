@@ -1,16 +1,41 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="ht">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Primera Página</title>
+    <title>Enskripsyon Kliyan</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>¡Hola, mundo!</h1>
-    <p>Esta es mi primera página web.</p>
+    <div class="container">
+        <form id="cadastro-form">
+            <h2>Enskripsyon Kliyan</h2>
+            
+            <div class="input-group">
+                <label for="nome">Non Konplè</label>
+                <input type="text" id="nome" name="nome" placeholder="Ekri non ou" required>
+            </div>
 
-    <img src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3a29ndzNoY3o0a2JidXpxdXI5MG93NHF3b2c2NDJ4cjR1bmh2djZ0ZiZlcD12MV9naWZzX3RyZW5kaW5nJmN0PWc/S99cgkURVO62qemEKM/giphy.gif" alt="Gatito saludando">
+            <div class="input-group">
+                <label for="email">Imèl</label>
+                <input type="email" id="email" name="email" placeholder="imelou@egzanp.com" required>
+            </div>
+
+            <div class="row">
+                <div class="input-group">
+                    <label for="nif">NIF/Matrikil</label>
+                    <input type="text" id="nif" name="nif" placeholder="000-000-000-0">
+                </div>
+                <div class="input-group">
+                    <label for="telefone">Telefòn</label>
+                    <input type="tel" id="telefone" name="telefone" placeholder="(509) 0000-0000">
+                </div>
+            </div>
+
+            <button type="submit">Enskri Kliyan</button>
+        </form>
+    </div>
 
 </body>
 </html>
