@@ -1,0 +1,259 @@
+import sqlite3
+import hashlib
+from datetime import datetime
+
+# ====================== CONEXÃO COM BANCO ======================
+def conectar():
+    conn = sqlite3.connect('sisvenda.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def criar_tabelas():
+    conn = conectar()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY,
+        username TEXT UNIQUE,
+        senha TEXT
+    )''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS clientes (
+        id INTEGER PRIMARY KEY,
+        nome TEXT,
+        cpf TEXT UNIQUE,
+        telefone TEXT,
+        email TEXT,
+        data_cadastro TEXT
+    )''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS produtos (
+        id INTEGER PRIMARY KEY,
+        nome TEXT,
+        preco REAL,
+        estoque INTEGER,
+        data_cadastro TEXT
+    )''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS vendas (
+        id INTEGER PRIMARY KEY,
+        cliente_id INTEGER,
+        data_venda TEXT,
+        total REAL,
+        FOREIGN KEY(cliente_id) REFERENCES clientes(id)
+    )''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS itens_venda (
+        id INTEGER PRIMARY KEY,
+        venda_id INTEGER,
+        produto_id INTEGER,
+        quantidade INTEGER,
+        preco_unitario REAL,
+        FOREIGN KEY(venda_id) REFERENCES vendas(id),
+        FOREIGN KEY(produto_id) REFERENCES produtos(id)
+    )''')
+    
+    # Usuário admin padrão
+    senha_hash = hashlib.sha256('admin123'.encode()).hexdigest()
+    cursor.execute("INSERT OR IGNORE INTO usuarios (username, senha) VALUES (?, ?)", 
+                   ('admin', senha_hash))
+    
+    conn.commit()
+    conn.close()
+
+# ====================== FUNÇÕES AUXILIARES ======================
+def hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
+
+def login():
+    print("\n=== LOGIN ===")
+    username = input("Usuário: ")
+    senha = input("Senha: ")
+    
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM usuarios WHERE username = ? AND senha = ?", 
+                   (username, hash_senha(senha)))
+    usuario = cursor.fetchone()
+    conn.close()
+    
+    if usuario:
+        print("Login realizado com sucesso!")
+        return True
+    else:
+        print("Usuário ou senha incorretos!")
+        return False
+
+# ====================== CADASTROS ======================
+def cadastrar_cliente():
+    print("\n=== CADASTRO DE CLIENTE ===")
+    nome = input("Nome: ")
+    cpf = input("CPF: ")
+    telefone = input("Telefone: ")
+    email = input("Email: ")
+    data = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO clientes (nome, cpf, telefone, email, data_cadastro)
+            VALUES (?, ?, ?, ?, ?)
+        """, (nome, cpf, telefone, email, data))
+        conn.commit()
+        print("✅ Cliente cadastrado com sucesso!")
+    except sqlite3.IntegrityError:
+        print("❌ CPF já cadastrado!")
+    conn.close()
+
+def cadastrar_produto():
+    print("\n=== CADASTRO DE PRODUTO ===")
+    nome = input("Nome do produto: ")
+    preco = float(input("Preço: R$ "))
+    estoque = int(input("Estoque inicial: "))
+    data = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO produtos (nome, preco, estoque, data_cadastro)
+        VALUES (?, ?, ?, ?)
+    """, (nome, preco, estoque, data))
+    conn.commit()
+    conn.close()
+    print("✅ Produto cadastrado com sucesso!")
+
+def registrar_venda():
+    print("\n=== REGISTRAR VENDA ===")
+    
+    # Listar clientes
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome FROM clientes")
+    clientes = cursor.fetchall()
+    
+    if not clientes:
+        print("Cadastre um cliente primeiro!")
+        conn.close()
+        return
+    
+    print("\nClientes disponíveis:")
+    for c in clientes:
+        print(f"{c['id']} - {c['nome']}")
+    
+    cliente_id = int(input("\nID do cliente: "))
+    
+    itens = []
+    total = 0
+    
+    while True:
+        cursor.execute("SELECT id, nome, preco, estoque FROM produtos")
+        produtos = cursor.fetchall()
+        
+        print("\nProdutos disponíveis:")
+        for p in produtos:
+            print(f"{p['id']} - {p['nome']} | R$ {p['preco']:.2f} | Estoque: {p['estoque']}")
+        
+        prod_id = int(input("\nID do produto (0 para finalizar): "))
+        if prod_id == 0:
+            break
+            
+        quantidade = int(input("Quantidade: "))
+        
+        cursor.execute("SELECT nome, preco, estoque FROM produtos WHERE id = ?", (prod_id,))
+        produto = cursor.fetchone()
+        
+        if produto and quantidade <= produto['estoque']:
+            subtotal = produto['preco'] * quantidade
+            itens.append((prod_id, quantidade, produto['preco'], subtotal))
+            total += subtotal
+            
+            # Atualizar estoque
+            cursor.execute("UPDATE produtos SET estoque = estoque - ? WHERE id = ?", 
+                         (quantidade, prod_id))
+        else:
+            print("Produto inválido ou estoque insuficiente!")
+    
+    if itens:
+        data = datetime.now().strftime("%d/%m/%Y %H:%M")
+        cursor.execute("INSERT INTO vendas (cliente_id, data_venda, total) VALUES (?, ?, ?)",
+                      (cliente_id, data, total))
+        venda_id = cursor.lastrowid
+        
+        for item in itens:
+            cursor.execute("""
+                INSERT INTO itens_venda (venda_id, produto_id, quantidade, preco_unitario)
+                VALUES (?, ?, ?, ?)
+            """, (venda_id, item[0], item[1], item[2]))
+        
+        conn.commit()
+        print(f"\n✅ Venda registrada com sucesso! Total: R$ {total:.2f}")
+    conn.close()
+
+# ====================== MENU ======================
+def menu():
+    while True:
+        print("\n" + "="*40)
+        print("       SISTEMA DE VENDAS")
+        print("="*40)
+        print("1. Cadastrar Cliente")
+        print("2. Cadastrar Produto")
+        print("3. Registrar Venda")
+        print("4. Listar Clientes")
+        print("5. Listar Produtos")
+        print("6. Listar Vendas")
+        print("0. Sair")
+        print("="*40)
+        
+        opcao = input("\nEscolha uma opção: ")
+        
+        if opcao == '1':
+            cadastrar_cliente()
+        elif opcao == '2':
+            cadastrar_produto()
+        elif opcao == '3':
+            registrar_venda()
+        elif opcao == '4':
+            # Listar clientes (implementação simples)
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM clientes")
+            for row in cursor.fetchall():
+                print(dict(row))
+            conn.close()
+        elif opcao == '5':
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM produtos")
+            for row in cursor.fetchall():
+                print(dict(row))
+            conn.close()
+        elif opcao == '6':
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT v.id, c.nome, v.data_venda, v.total 
+                FROM vendas v
+                JOIN clientes c ON v.cliente_id = c.id
+            """)
+            for row in cursor.fetchall():
+                print(dict(row))
+            conn.close()
+        elif opcao == '0':
+            print("Saindo do sistema...")
+            break
+        else:
+            print("Opção inválida!")
+
+# ====================== INICIALIZAÇÃO ======================
+if __name__ == "__main__":
+    criar_tabelas()
+    print("Bem-vindo ao Sistema de Vendas!")
+    
+    if login():
+        menu()
